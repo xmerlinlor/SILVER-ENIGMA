@@ -1,13 +1,14 @@
 // ============================================
 // 👑 SILVER-ENIGMA
 // ⚡ WhatsApp Multi-Device Group Management Bot
+// 🌐 Render Pairing Web Server
 // ============================================
 
 import "dotenv/config";
 import express from "express";
 
 import {
-  startWhatsApp,
+  connectWhatsApp,
   requestPairingCode,
   getConnectionStatus
 } from "./whatsapp/connection.js";
@@ -25,7 +26,7 @@ const PORT =
   Number(process.env.PORT) || 3000;
 
 // ============================================
-// 🏠 HOME
+// 🏠 HOME PAGE
 // ============================================
 
 app.get("/", (req, res) => {
@@ -34,50 +35,82 @@ app.get("/", (req, res) => {
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1.0">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
   <title>SILVER-ENIGMA</title>
 
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #0f0f0f;
+
+      background:
+        linear-gradient(
+          135deg,
+          #050505,
+          #151515
+        );
+
       color: white;
       font-family: Arial, sans-serif;
       text-align: center;
     }
 
     .box {
-      width: 90%;
+      width: 92%;
       max-width: 500px;
-      padding: 35px;
+      padding: 35px 25px;
+
       border-radius: 20px;
+
       background: #181818;
-      box-shadow: 0 0 30px rgba(255,255,255,0.08);
+
+      box-shadow:
+        0 0 35px
+        rgba(255,255,255,0.08);
+    }
+
+    .logo {
+      font-size: 60px;
+      margin-bottom: 10px;
     }
 
     h1 {
-      margin-bottom: 10px;
+      margin: 0 0 10px;
+      font-size: 28px;
     }
 
     p {
       color: #aaa;
+      margin-bottom: 25px;
     }
 
     a {
       display: inline-block;
-      margin-top: 20px;
-      padding: 13px 25px;
+
+      padding: 14px 25px;
+
       border-radius: 10px;
+
       background: white;
       color: black;
+
       text-decoration: none;
       font-weight: bold;
+    }
+
+    a:hover {
+      opacity: 0.85;
     }
   </style>
 </head>
@@ -86,9 +119,13 @@ app.get("/", (req, res) => {
 
   <div class="box">
 
-    <h1>👑 SILVER-ENIGMA</h1>
+    <div class="logo">👑</div>
 
-    <p>⚡ WhatsApp Multi-Device Bot</p>
+    <h1>SILVER-ENIGMA</h1>
+
+    <p>
+      ⚡ WhatsApp Multi-Device Bot
+    </p>
 
     <a href="/pair">
       📱 Pair WhatsApp
@@ -120,7 +157,7 @@ app.get("/pair", (req, res) => {
     content="width=device-width, initial-scale=1.0"
   >
 
-  <title>Pair SILVER-ENIGMA</title>
+  <title>SILVER-ENIGMA Pairing</title>
 
   <style>
 
@@ -130,6 +167,7 @@ app.get("/pair", (req, res) => {
 
     body {
       margin: 0;
+
       min-height: 100vh;
 
       display: flex;
@@ -145,12 +183,11 @@ app.get("/pair", (req, res) => {
 
       color: white;
 
-      font-family:
-        Arial,
-        sans-serif;
+      font-family: Arial, sans-serif;
     }
 
     .container {
+
       width: 92%;
       max-width: 450px;
 
@@ -168,21 +205,33 @@ app.get("/pair", (req, res) => {
     }
 
     .logo {
+
       font-size: 55px;
+
       margin-bottom: 10px;
+
     }
 
     h1 {
+
       margin: 0;
+
       font-size: 28px;
+
     }
 
     .subtitle {
+
       color: #999;
+
+      margin-top: 8px;
+
       margin-bottom: 25px;
+
     }
 
     input {
+
       width: 100%;
 
       padding: 15px;
@@ -200,9 +249,17 @@ app.get("/pair", (req, res) => {
       outline: none;
 
       margin-bottom: 15px;
+
+    }
+
+    input:focus {
+
+      border-color: #777;
+
     }
 
     button {
+
       width: 100%;
 
       padding: 15px;
@@ -220,15 +277,21 @@ app.get("/pair", (req, res) => {
       font-weight: bold;
 
       cursor: pointer;
+
     }
 
     button:disabled {
+
       opacity: 0.5;
+
       cursor: not-allowed;
+
     }
 
     #result {
+
       margin-top: 20px;
+
       padding: 15px;
 
       border-radius: 10px;
@@ -238,19 +301,23 @@ app.get("/pair", (req, res) => {
       display: none;
 
       word-break: break-word;
+
     }
 
     .code {
+
       font-size: 28px;
 
       letter-spacing: 5px;
 
       font-weight: bold;
 
-      margin-top: 10px;
+      margin-top: 12px;
+
     }
 
     .instructions {
+
       margin-top: 25px;
 
       text-align: left;
@@ -260,6 +327,7 @@ app.get("/pair", (req, res) => {
       font-size: 14px;
 
       line-height: 1.7;
+
     }
 
   </style>
@@ -285,6 +353,7 @@ app.get("/pair", (req, res) => {
     <input
       id="number"
       type="tel"
+      inputmode="numeric"
       placeholder="2348012345678"
       autocomplete="off"
     />
@@ -300,15 +369,15 @@ app.get("/pair", (req, res) => {
 
     <div class="instructions">
 
-      <b>📱 How to pair:</b>
+      <b>📱 HOW TO PAIR</b>
 
-      <br>
+      <br><br>
 
       1. Enter your WhatsApp number with country code.
 
       <br>
 
-      2. Do not use +, spaces or dashes.
+      2. Do not use <b>+</b>, spaces or dashes.
 
       <br>
 
@@ -320,22 +389,19 @@ app.get("/pair", (req, res) => {
 
       <br>
 
-      5. Go to
-      <b>Linked Devices</b>.
+      5. Go to <b>Linked Devices</b>.
 
       <br>
 
-      6. Select
-      <b>Link a device</b>.
+      6. Select <b>Link a device</b>.
 
       <br>
 
-      7. Choose
-      <b>Link with phone number</b>.
+      7. Choose <b>Link with phone number</b>.
 
       <br>
 
-      8. Enter the displayed code.
+      8. Enter the displayed pairing code.
 
     </div>
 
@@ -365,6 +431,7 @@ async function pairWhatsApp() {
       "❌ Please enter your WhatsApp number.";
 
     return;
+
   }
 
   button.disabled = true;
@@ -375,7 +442,7 @@ async function pairWhatsApp() {
   result.style.display = "block";
 
   result.innerHTML =
-    "⏳ Please wait...";
+    "⏳ Connecting to WhatsApp...";
 
   try {
 
@@ -394,9 +461,11 @@ async function pairWhatsApp() {
         data.error ||
         "Pairing failed."
       );
+
     }
 
     result.innerHTML = `
+
       <div>
         ✅ PAIRING CODE
       </div>
@@ -407,17 +476,18 @@ async function pairWhatsApp() {
 
       <br>
 
-      📱 Enter this code in WhatsApp
-      <br>
-      under Linked Devices.
+      📱 Enter this code in WhatsApp.
+
     `;
 
   } catch (error) {
 
     result.innerHTML =
       "❌ " +
-      (error.message ||
-      "Pairing failed.");
+      (
+        error.message ||
+        "Pairing failed."
+      );
 
   } finally {
 
@@ -425,7 +495,9 @@ async function pairWhatsApp() {
 
     button.innerText =
       "🔑 GET PAIRING CODE";
+
   }
+
 }
 
 </script>
@@ -433,6 +505,7 @@ async function pairWhatsApp() {
 </body>
 </html>
   `);
+
 });
 
 // ============================================
@@ -451,8 +524,12 @@ app.get("/api/pair", async (req, res) => {
     if (!number) {
 
       return res.status(400).json({
+
+        success: false,
+
         error:
           "WhatsApp number is required."
+
       });
 
     }
@@ -466,8 +543,12 @@ app.get("/api/pair", async (req, res) => {
     ) {
 
       return res.status(400).json({
+
+        success: false,
+
         error:
           "Invalid WhatsApp number."
+
       });
 
     }
@@ -482,8 +563,12 @@ app.get("/api/pair", async (req, res) => {
       );
 
     return res.json({
+
       success: true,
-      code: String(code)
+
+      code:
+        String(code)
+
     });
 
   } catch (error) {
@@ -494,9 +579,13 @@ app.get("/api/pair", async (req, res) => {
     );
 
     return res.status(500).json({
+
+      success: false,
+
       error:
         error?.message ||
         "Unable to generate pairing code."
+
     });
 
   }
@@ -514,19 +603,17 @@ app.get("/status", (req, res) => {
 
   try {
 
-    if (
-      typeof getConnectionStatus ===
-      "function"
-    ) {
+    connection =
+      getConnectionStatus();
 
-      connection =
-        getConnectionStatus();
+  } catch (error) {
 
-    }
+    connection =
+      "error";
 
-  } catch {}
+  }
 
-  res.json({
+  res.status(200).json({
 
     bot:
       config.BOT_NAME ||
@@ -541,7 +628,8 @@ app.get("/status", (req, res) => {
       "WhatsApp Multi-Device",
 
     prefix:
-      config.PREFIX || "."
+      config.PREFIX ||
+      "."
 
   });
 
@@ -557,18 +645,34 @@ app.listen(
   () => {
 
     console.log(
-      `🌐 WEB SERVER RUNNING ON PORT ${PORT}`
+      "╭────────────────────────────╮"
     );
 
     console.log(
-      `🔗 PAIR PAGE: /pair`
+      "│ 👑 SILVER-ENIGMA           │"
+    );
+
+    console.log(
+      "│ 🌐 WEB SERVER ONLINE       │"
+    );
+
+    console.log(
+      "╰────────────────────────────╯"
+    );
+
+    console.log(
+      `🌐 PORT: ${PORT}`
+    );
+
+    console.log(
+      "🔗 PAIR PAGE: /pair"
     );
 
   }
 );
 
 // ============================================
-// 🤖 START WHATSAPP BOT
+// 🤖 START WHATSAPP
 // ============================================
 
 async function startBot() {
@@ -584,55 +688,24 @@ async function startBot() {
     );
 
     console.log(
-      "│ ⚡ STARTING WHATSAPP BOT   │"
+      "│ ⚡ STARTING WHATSAPP       │"
     );
 
     console.log(
       "╰────────────────────────────╯"
     );
 
-    const sock =
-      await startWhatsApp();
+    // ========================================
+    // IMPORTANT:
+    // connection.js handles messages.
+    // ========================================
+
+    await connectWhatsApp(
+      handleMessage
+    );
 
     console.log(
       "✅ WHATSAPP CONNECTION STARTED"
-    );
-
-    // ========================================
-    // 💬 MESSAGE HANDLER
-    // ========================================
-
-    sock.ev.on(
-      "messages.upsert",
-      async ({ messages }) => {
-
-        try {
-
-          if (
-            !messages ||
-            !messages.length
-          ) {
-            return;
-          }
-
-          const message =
-            messages[0];
-
-          await handleMessage(
-            sock,
-            message
-          );
-
-        } catch (error) {
-
-          console.error(
-            "❌ MESSAGE HANDLER ERROR:",
-            error
-          );
-
-        }
-
-      }
     );
 
   } catch (error) {
