@@ -1,0 +1,26 @@
+{
+  "users": {},
+  "groups": {},
+  "sudo": [],
+  "blocked": [],
+  "settings": {
+    "maintenance": false,
+    "autoRead": false,
+    "autoTyping": false,
+    "autoRecording": false,
+    "autoReact": false,
+    "publicMode": true,
+    "prefix": "."
+  },
+  "groupSettings": {},
+  "warnings": {},
+  "economy": {},
+  "levels": {},
+  "premium": {},
+  "statistics": {
+    "messages": 0,
+    "commands": 0,
+    "users": 0,
+    "groups": 0
+  }
+}
