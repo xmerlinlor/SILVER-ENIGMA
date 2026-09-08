@@ -4,67 +4,113 @@
 // ============================================
 
 import config from "../config.js";
+import { executeCommand } from "../cmd/cmd.js";
 
 export async function handleMessage(sock, message) {
   try {
     if (!message?.message) return;
 
-    const remoteJid = message.key.remoteJid;
+    const remoteJid = message?.key?.remoteJid;
 
     if (!remoteJid) return;
 
-    // Ignore status broadcasts
+    // Ignore WhatsApp status
     if (remoteJid === "status@broadcast") return;
 
-    const messageType = Object.keys(message.message)[0];
+    // ============================================
+    // GET MESSAGE TEXT
+    // ============================================
 
-    // Get text from common message types
+    const messageType =
+      Object.keys(message.message)[0];
+
     let text = "";
 
-    if (messageType === "conversation") {
-      text = message.message.conversation || "";
-    } else if (messageType === "extendedTextMessage") {
-      text = message.message.extendedTextMessage?.text || "";
-    } else if (messageType === "imageMessage") {
-      text = message.message.imageMessage?.caption || "";
-    } else if (messageType === "videoMessage") {
-      text = message.message.videoMessage?.caption || "";
+    switch (messageType) {
+      case "conversation":
+        text =
+          message.message.conversation || "";
+        break;
+
+      case "extendedTextMessage":
+        text =
+          message.message.extendedTextMessage?.text || "";
+        break;
+
+      case "imageMessage":
+        text =
+          message.message.imageMessage?.caption || "";
+        break;
+
+      case "videoMessage":
+        text =
+          message.message.videoMessage?.caption || "";
+        break;
+
+      case "buttonsResponseMessage":
+        text =
+          message.message.buttonsResponseMessage
+            ?.selectedButtonId || "";
+        break;
+
+      case "listResponseMessage":
+        text =
+          message.message.listResponseMessage
+            ?.singleSelectReply?.selectedRowId || "";
+        break;
+
+      default:
+        return;
     }
 
-    text = text.trim();
+    text = String(text).trim();
 
     if (!text) return;
 
-    // ========================================
-    // PREFIX CHECK
-    // ========================================
+    // ============================================
+    // PREFIX
+    // ============================================
 
-    if (!text.startsWith(config.PREFIX)) return;
+    const prefix = config.PREFIX || ".";
 
-    const commandText = text
-      .slice(config.PREFIX.length)
-      .trim();
+    if (!text.startsWith(prefix)) return;
+
+    const commandText =
+      text.slice(prefix.length).trim();
 
     if (!commandText) return;
 
-    const args = commandText.split(/\s+/);
-    const command = args.shift().toLowerCase();
+    const parts =
+      commandText.split(/\s+/);
+
+    const commandName =
+      parts.shift()?.toLowerCase();
+
+    const args = parts;
+
+    const commandArgs =
+      args.length
+        ? args
+        : [];
+
+    const commandInput =
+      args.join(" ");
 
     console.log(
-      `📩 COMMAND: ${config.PREFIX}${command}`
+      `📩 COMMAND: ${prefix}${commandName}`
     );
 
-    // ========================================
-    // TEMPORARY TEST COMMAND
-    // ========================================
+    // ============================================
+    // EXECUTE COMMAND
+    // ============================================
 
-    if (command === "ping") {
-      await sock.sendMessage(remoteJid, {
-        text: "🏓 PONG!\n\n👑 SILVER-ENIGMA IS ONLINE ⚡"
-      });
-
-      return;
-    }
+    await executeCommand({
+      sock,
+      message,
+      commandName,
+      args: commandArgs,
+      text: commandInput
+    });
 
   } catch (error) {
     console.error(
@@ -73,3 +119,5 @@ export async function handleMessage(sock, message) {
     );
   }
 }
+
+export default handleMessage;
