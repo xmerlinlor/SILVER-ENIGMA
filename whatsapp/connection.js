@@ -1,6 +1,6 @@
 // ============================================
 // 👑 SILVER-ENIGMA
-// 📱 WHATSAPP CONNECTION + PAIRING SYSTEM
+// 📱 WHATSAPP CONNECTION MANAGER
 // ============================================
 
 import makeWASocket, {
@@ -11,7 +11,7 @@ import makeWASocket, {
 import pino from "pino";
 
 // ============================================
-// ⚙️ CONFIG
+// ⚙️ SETTINGS
 // ============================================
 
 const SESSION_PATH = "./session";
@@ -19,29 +19,37 @@ const SESSION_PATH = "./session";
 let sock = null;
 let messageHandler = null;
 let connectionState = "disconnected";
+let reconnectTimer = null;
+let starting = false;
 
 // ============================================
-// 📱 START WHATSAPP
+// 🔌 CONNECT WHATSAPP
 // ============================================
 
 export async function connectWhatsApp(handler) {
   messageHandler = handler;
 
+  if (sock && connectionState === "connected") {
+    return sock;
+  }
+
   return startWhatsApp();
 }
 
 // ============================================
-// 🚀 START CONNECTION
+// 🚀 START WHATSAPP
 // ============================================
 
 export async function startWhatsApp() {
+  if (starting) {
+    return sock;
+  }
+
+  starting = true;
+
   try {
-    const {
-      state,
-      saveCreds
-    } = await useMultiFileAuthState(
-      SESSION_PATH
-    );
+    const { state, saveCreds } =
+      await useMultiFileAuthState(SESSION_PATH);
 
     sock = makeWASocket({
       auth: state,
@@ -62,7 +70,7 @@ export async function startWhatsApp() {
     });
 
     // ========================================
-    // 💾 SAVE CREDENTIALS
+    // 💾 SAVE SESSION
     // ========================================
 
     sock.ev.on(
@@ -77,52 +85,45 @@ export async function startWhatsApp() {
     sock.ev.on(
       "messages.upsert",
       async ({ messages }) => {
-        try {
-          if (
-            !messageHandler ||
-            !messages?.length
-          ) {
-            return;
-          }
+        if (!messageHandler || !messages?.length) {
+          return;
+        }
 
-          for (const message of messages) {
+        for (const message of messages) {
+          try {
             await messageHandler(
               sock,
               message
             );
+          } catch (error) {
+            console.error(
+              "❌ MESSAGE HANDLER ERROR:",
+              error
+            );
           }
-
-        } catch (error) {
-          console.error(
-            "❌ MESSAGE HANDLER ERROR:",
-            error
-          );
         }
       }
     );
 
     // ========================================
-    // 📱 CONNECTION UPDATE
+    // 📡 CONNECTION UPDATE
     // ========================================
 
     sock.ev.on(
       "connection.update",
-      async update => {
-
+      async (update) => {
         const {
           connection,
           lastDisconnect
         } = update;
 
         // ====================================
-        // CONNECTED
+        // 🟢 CONNECTED
         // ====================================
 
-        if (
-          connection === "open"
-        ) {
-          connectionState =
-            "connected";
+        if (connection === "open") {
+          connectionState = "connected";
+          starting = false;
 
           console.log("");
           console.log(
@@ -132,7 +133,7 @@ export async function startWhatsApp() {
             "│ 👑 SILVER-ENIGMA           │"
           );
           console.log(
-            "│ ✅ WHATSAPP CONNECTED      │"
+            "│ 🟢 WHATSAPP CONNECTED      │"
           );
           console.log(
             "╰────────────────────────────╯"
@@ -141,62 +142,73 @@ export async function startWhatsApp() {
         }
 
         // ====================================
-        // DISCONNECTED
+        // 🔴 CLOSED
         // ====================================
 
-        if (
-          connection === "close"
-        ) {
-
-          connectionState =
-            "disconnected";
+        if (connection === "close") {
+          connectionState = "disconnected";
+          starting = false;
+          sock = null;
 
           const statusCode =
-            lastDisconnect
-              ?.error
-              ?.output
-              ?.statusCode;
-
-          const shouldReconnect =
-            statusCode !==
-            DisconnectReason.loggedOut;
+            lastDisconnect?.error?.output?.statusCode;
 
           console.log(
-            "❌ WHATSAPP CONNECTION CLOSED"
+            `❌ WHATSAPP CONNECTION CLOSED: ${statusCode || "UNKNOWN"}`
           );
 
-          if (shouldReconnect) {
+          // ==================================
+          // 🔐 LOGGED OUT
+          // ==================================
 
+          if (
+            statusCode === DisconnectReason.loggedOut
+          ) {
+            connectionState = "logged_out";
+
+            console.log(
+              "🔐 WHATSAPP SESSION LOGGED OUT."
+            );
+
+            return;
+          }
+
+          // ==================================
+          // 🔄 RECONNECT
+          // ==================================
+
+          if (!reconnectTimer) {
             console.log(
               "🔄 RECONNECTING IN 5 SECONDS..."
             );
 
-            setTimeout(
-              () => {
-                startWhatsApp();
+            reconnectTimer = setTimeout(
+              async () => {
+                reconnectTimer = null;
+
+                try {
+                  await startWhatsApp();
+                } catch (error) {
+                  console.error(
+                    "❌ RECONNECT ERROR:",
+                    error
+                  );
+                }
               },
               5000
-            );
-
-          } else {
-
-            connectionState =
-              "logged_out";
-
-            console.log(
-              "🔐 SESSION LOGGED OUT."
             );
           }
         }
       }
     );
 
+    starting = false;
+
     return sock;
 
   } catch (error) {
-
-    connectionState =
-      "error";
+    starting = false;
+    connectionState = "error";
 
     console.error(
       "❌ WHATSAPP START ERROR:",
@@ -208,13 +220,35 @@ export async function startWhatsApp() {
 }
 
 // ============================================
-// 🔑 GENERATE PAIRING CODE
+// 🔑 REQUEST PAIRING CODE
 // ============================================
 
 export async function requestPairingCode(
   phoneNumber
 ) {
   try {
+    let number =
+      String(phoneNumber || "")
+        .replace(/\D/g, "");
+
+    if (!number) {
+      throw new Error(
+        "WhatsApp phone number is required."
+      );
+    }
+
+    if (
+      number.length < 8 ||
+      number.length > 15
+    ) {
+      throw new Error(
+        "Invalid WhatsApp phone number."
+      );
+    }
+
+    // ========================================
+    // START SOCKET IF NEEDED
+    // ========================================
 
     if (!sock) {
       await startWhatsApp();
@@ -226,18 +260,8 @@ export async function requestPairingCode(
       );
     }
 
-    let number =
-      String(phoneNumber || "")
-        .replace(/\D/g, "");
-
-    if (!number) {
-      throw new Error(
-        "Invalid WhatsApp phone number."
-      );
-    }
-
     // ========================================
-    // WAIT FOR SOCKET TO BE READY
+    // CHECK PAIRING SUPPORT
     // ========================================
 
     if (
@@ -245,38 +269,30 @@ export async function requestPairingCode(
       "function"
     ) {
       throw new Error(
-        "This installed Baileys version does not support pairing codes."
+        "Pairing codes are not supported by the installed Baileys version."
       );
     }
 
     console.log(
-      `📱 REQUESTING PAIRING CODE FOR: ${number}`
+      `📱 PAIRING REQUEST: ${number}`
     );
+
+    // ========================================
+    // REQUEST CODE
+    // ========================================
 
     const code =
       await sock.requestPairingCode(
         number
       );
 
-    console.log("");
     console.log(
-      "╭────────────────────────────╮"
+      `🔑 PAIRING CODE: ${code}`
     );
-    console.log(
-      "│ 🔑 WHATSAPP PAIRING CODE   │"
-    );
-    console.log(
-      `│ ${String(code).padEnd(26)}│`
-    );
-    console.log(
-      "╰────────────────────────────╯"
-    );
-    console.log("");
 
     return code;
 
   } catch (error) {
-
     console.error(
       "❌ PAIRING CODE ERROR:",
       error
@@ -303,40 +319,33 @@ export function getWhatsAppSocket() {
 }
 
 // ============================================
-// 🔐 CHECK CONNECTED
+// 🟢 CHECK CONNECTION
 // ============================================
 
 export function isWhatsAppConnected() {
-  return (
-    connectionState ===
-    "connected"
-  );
+  return connectionState === "connected";
 }
 
 // ============================================
-// 👋 LOGOUT
+// 🚪 LOGOUT
 // ============================================
 
 export async function logoutWhatsApp() {
   try {
-
     if (!sock) {
       return false;
     }
 
     await sock.logout();
 
-    connectionState =
-      "logged_out";
-
     sock = null;
+    connectionState = "logged_out";
 
     return true;
 
   } catch (error) {
-
     console.error(
-      "❌ WHATSAPP LOGOUT ERROR:",
+      "❌ LOGOUT ERROR:",
       error
     );
 
