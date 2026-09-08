@@ -4,7 +4,7 @@
 // ============================================
 
 import config from "../config.js";
-import { executeCommand } from "../cmd/cmd.js";
+import { executeCommand } from "../commands/cmd.js";
 
 export async function handleMessage(sock, message) {
   try {
@@ -14,12 +14,7 @@ export async function handleMessage(sock, message) {
 
     if (!remoteJid) return;
 
-    // Ignore WhatsApp status
     if (remoteJid === "status@broadcast") return;
-
-    // ============================================
-    // GET MESSAGE TEXT
-    // ============================================
 
     const messageType =
       Object.keys(message.message)[0];
@@ -28,8 +23,7 @@ export async function handleMessage(sock, message) {
 
     switch (messageType) {
       case "conversation":
-        text =
-          message.message.conversation || "";
+        text = message.message.conversation || "";
         break;
 
       case "extendedTextMessage":
@@ -67,10 +61,6 @@ export async function handleMessage(sock, message) {
 
     if (!text) return;
 
-    // ============================================
-    // PREFIX
-    // ============================================
-
     const prefix = config.PREFIX || ".";
 
     if (!text.startsWith(prefix)) return;
@@ -80,35 +70,26 @@ export async function handleMessage(sock, message) {
 
     if (!commandText) return;
 
-    const parts =
-      commandText.split(/\s+/);
+    const parts = commandText.split(/\s+/);
 
     const commandName =
       parts.shift()?.toLowerCase();
 
+    if (!commandName) return;
+
     const args = parts;
 
-    const commandArgs =
-      args.length
-        ? args
-        : [];
-
-    const commandInput =
-      args.join(" ");
+    const commandInput = args.join(" ");
 
     console.log(
       `📩 COMMAND: ${prefix}${commandName}`
     );
 
-    // ============================================
-    // EXECUTE COMMAND
-    // ============================================
-
     await executeCommand({
       sock,
       message,
       commandName,
-      args: commandArgs,
+      args,
       text: commandInput
     });
 
